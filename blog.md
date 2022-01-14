@@ -27,4 +27,114 @@
 
 * 单个文件的并发下载（第一阶段完成）
 * 多文件的并发下载
-* 
+* 等等
+
+
+&emsp;实现并发文件下载助手，首先想到了利用python并发编程，之所以要采用并发技术，是因为如果要下载大文件，从网站上下载的时间会非常长，如果能够让程序并发，就能大大缩减下载时间，并且能够同时请求多张图片，目的**解决CPU和网络I/O之间的差距**。  
+并发编程的方式有多进程、多线程、异步编程三种方式，本次利用多线程的方式实现异步编程。**多线程方式是抢占式多任务**，最终由操作系统调度。  
+
+并发文件下载助手需要利用到的技术（技术需求）：
+
+* python网络爬虫
+* http协议
+* TCP/IP协议
+
+##结构化需求分析与建模
+
+&emsp; I/O 密集型最适合使用多线程，能够大量缩短I/O时间。比如要下载多个文件，每次去下载一个文件，就是发起一次 HTTP 请求（使用 TCP 协议），客户端首先通过 socket.socket() 创建一个套接字，**然后调用 connect() 方法经过三次握手与服务端建立 TCP 连接**，这个过程是阻塞的。建立连接后，客户端将请求（文件源）发送给服务端，然后服务端返回响应，客户端用 receive() 方法每次接收一定数量的字节。  
+&emsp;网络 I/O 对于 CPU 来说是无比漫长的，如果是依序下载，CPU 就要一直阻塞到第一个文件的字节全部下载完成后，才能下载第二个文件，这会浪费掉大量时间。为了合理利用 CPU 资源，可以使用多线程，每个线程去下载一个文件（或者将一个大文件分割成多个部分，每个线程下载一个部分），当下载第一个文件的任务阻塞时，CPU 切换到第二个线程，它开始下载第二个文件，依次类推，当第一个文件有响应报文到达时，等其它线程阻塞后，CPU 又会切换到下载第一个文件那个线程。  
+**整个过程是互斥进行的。**
+
+TCP/IP阶段数据流图
+
+
+<img src="dfd1.png" width = "400" height = "800" alt="can not load" align=center />
+
+
+
+文件传输阶段状态转换图
+
+
+
+
+<img src="std.png" width = "800" height = "800" alt="can not load" align=center />
+
+
+不知为何markdown语法无法显示图片，这里就用了html语法。
+
+
+
+#软件设计
+
+并发文件下载需要利用到网络编程、http协议等方面的知识，在python中有很多相关模块和类可以使用。
+
+
+* **threading** 模块可以实现多线程，**Queue **模块创建线程级安全的队列，各线程从队列中取任务并执行
+
+
+&emsp;当我们需要创建多线程时（8个线程），可以像如下使用:
+```     
+for i in range(8):
+    threads = ThreadWorker(queue)
+    threads.daemon = True  # 如果工作线程在等待更多的任务时阻塞了，主线程也可以正常退出
+    threads.start()  # 启动线程
+```
+
+
+* Requests是用python语言基于urllib编写的，采用的是Apache2 Licensed开源协议的HTTP库，Requests它会比urllib更加方便，可以节约我们大量的工作。
+
+如果要下载一个大文件，像下面的代码
+```
+ import requests
+
+with requests.get(url) as r:
+r.raise_for_status()
+with open(filename, 'wb') as fp:
+fp.write(r.content)
+```
+
+&emsp;客户端发起 HTTP GET 请求后，需要等待整个文件内容全部到达 内核空间 并被内核拷贝到 用户空间 后，用户的下载进程才能解除阻塞状态，并继续将文件内容保存到本地文件中。如果文件非常大，达到了GB级别甚至更大，那么客户端的内存可能不足以缓存文件的全部内容，所以在下载的过程中，用户的下载进程会因为 OOM（out of memory） 被内核 killed。  
+&emsp;所以设置 requests.request(method, url, **kwargs) 中的 stream 参数为 True 的话，客户端不会立即下载文件的内容,但客户端与服务端会持续建立 HTTP 连接。
+&emsp;再通过 requests.Response.iter_content(chunk_size=1, decode_unicode=False) 指定每次下载的数据块的大小，就可以实现 分块下载，即每次有 chunk_size 大小的数据块到达客户端的内核空间，然后被复制到用户空间后，下载的进程就会解除阻塞状态，并将此 chunk_size 大小的内容保存到本地文件中了。
+
+实现代码如下
+```
+with requests.get(url, stream=True) as r:
+r.raise_for_status()
+with open(filename, 'wb') as fp:
+for chunk in r.iter_content(chunk_size=512):
+if chunk:
+fp.write(chunk)
+```
+
+* 利用tqdm模块显示下载的进度
+
+```
+from tqdm import tqdm
+
+with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, ascii=True, desc=filename) as bar:  # 打印下载时的进度条，实时显示下载速度
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(filename, 'wb') as fp:
+            for chunk in r.iter_content(chunk_size=512):
+                if chunk:
+                    fp.write(chunk)
+                    bar.update(len(chunk))  # 实时更新已完成的数据量
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
