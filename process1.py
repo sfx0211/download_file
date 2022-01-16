@@ -20,10 +20,10 @@ def _fetchByRange(lock, url, temp_filename, config_filename, part_number, start,
     stop: 块的结束位置
     '''
     headers = {'Range': 'bytes=%d-%d' % (start, stop)}
-    r = request_('GET', url, info='Range: bytes={}-{}'.format(start, stop), headers=headers)
+    r = request_('GET', url, headers=headers)
 
     part_length = stop - start + 1
-    if not r or len(r.content) != part_length:  # 请求失败时，r 为 None; 或者，突然网络故障了，连接被服务器强制关闭了，此时客户端读取的响应体的长度不足
+    if not r or len(r.content) != part_length:  # 请求失败时，r 为 None
         return {
             'failed': True  # 用于告知 _fetchByRange() 的调用方，此 Range 下载失败了
         }
@@ -39,7 +39,7 @@ def _fetchByRange(lock, url, temp_filename, config_filename, part_number, start,
     # 获取锁
     lock.acquire()
     try:
-        with open(temp_filename, 'rb+') as fp:  # 注意: 不能用 a 模式哦，那样的话就算用 seek(0, 0) 移动指针到文件开头后，还是会从文件末尾处追加
+        with open(temp_filename, 'rb+') as fp:
             fp.seek(start)  # 移动文件指针
             fp.write(r.content)  # 写入已下载的字节
         # 读取原配置文件中的内容
@@ -53,14 +53,14 @@ def _fetchByRange(lock, url, temp_filename, config_filename, part_number, start,
         f.close()
     except Exception as e:
         return {
-            'failed': True  # 用于告知 _fetchByRange() 的调用方，此 Range 下载失败了
+            'failed': True  #  Range 下载失败了
         }
     finally:
         # 释放锁
         lock.release()
     return {
         'part': part,
-        'failed': False  # 用于告知 _fetchByRange() 的调用方，此 Range 成功下载
+        'failed': False  #  Range 成功下载
     }
 
 
@@ -77,7 +77,7 @@ def download_file(dest_filename, multipart_chunksize, url):
     config_filename = official_filename + '.swp.cfg'  # 没下载完成时，存储 ETag 等信息的配置文件名
 
     # 获取文件的大小和 ETag
-    r = request_('HEAD', url, info='header message')
+    r = request_('HEAD', url)
     if not r:  # 请求失败时，r 为 None
         return
     file_size = int(r.headers['Content-Length'])
@@ -92,14 +92,14 @@ def download_file(dest_filename, multipart_chunksize, url):
 
     # 首先需要判断此文件支不支持 Range 下载，请求第 1 个字节即可
     headers = {'Range': 'bytes=0-0'}
-    r = request_('HEAD', url, info='Range: bytes=0-0', headers=headers)
+    r = request_('HEAD', url, headers=headers)
     if not r:  # 请求失败时，r 为 None
         return
 
     if r.status_code != 206:  # 不支持 Range 下载时
         # 需要重新从头开始下载 (wb 模式)
         with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename) as bar:  # 打印下载时的进度条，并动态显示下载速度
-            r = request_('GET', url, info='all content', stream=True)
+            r = request_('GET', url, stream=True)
             if not r:  # 请求失败时，r 为 None
                 return
             with open(temp_filename, 'wb') as fp:

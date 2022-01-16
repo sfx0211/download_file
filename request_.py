@@ -1,7 +1,7 @@
 import requests
 
 
-def request_(method, url, info='common url', *args, **kwargs):
+def request_(method, url,*args, **kwargs):
     '''
   requests.request() 方法
     '''

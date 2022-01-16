@@ -27,7 +27,7 @@
 
 * 单个文件的并发下载（第一阶段完成）
 * 多文件的并发下载
-* 等等
+* 下载文件时如果因为网络问题重连，资源不会丢失，也就是断点续传
 
 
 &emsp;实现并发文件下载助手，首先想到了利用python并发编程，之所以要采用并发技术，是因为如果要下载大文件，从网站上下载的时间会非常长，如果能够让程序并发，就能大大缩减下载时间，并且能够同时请求多张图片，目的**解决CPU和网络I/O之间的差距**。  
@@ -110,22 +110,37 @@ fp.write(chunk)
 * 利用tqdm模块显示下载的进度
 
 ```
-from tqdm import tqdm
-
-with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, ascii=True, desc=filename) as bar:  # 打印下载时的进度条，实时显示下载速度
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(filename, 'wb') as fp:
-            for chunk in r.iter_content(chunk_size=512):
-                if chunk:
-                    fp.write(chunk)
-                    bar.update(len(chunk))  # 实时更新已完成的数据量
+    from tqdm import tqdm
+        with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename) as bar:  # 打印下载时的进度条，并动态显示下载速度
+            r = request_('GET', url, stream=True)
+            if not r:  # 请求失败时，r 为 None
+                return
+            with open(temp_filename, 'wb') as fp:
+                for chunk in r.iter_content(chunk_size=multipart_chunksize):
+                    if chunk:
+                        fp.write(chunk)
+                        bar.update(len(chunk))
 
 ```
+其中unit = 'B'是指按Byte来计算，unit_scale = True 表示会自动拓展单位，
+
+* 利用click快速创建命令行选项与参数
+
+```
+@click.command()
+@click.option('--dest_filename', type=click.Path(), help="Name of the local destination file with extension")
+@click.option('--multipart_chunksize', default=8*1024*1024, help="Size of chunk, unit is bytes")
+@click.argument('url', type=click.Path())
+```
+可选的命令行选项 --dest_filename、--multipart_chunksize和必填的命令行参数 url。
 
 
 
+* 断点续传
+  
+1. Range 
 
+**HTTP/1.1 RFC 2616** 开始支持 Range，客户端只需要在 HTTP 的 请求头部 中添加 Range: bytes=[start]-[stop] 即可
 
 
 
