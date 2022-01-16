@@ -165,7 +165,7 @@ def download_file(dest_filename, multipart_chunksize, url):
             to_do = []
             # 创建并排定Future
             for part_number in parts:
-                # 重要: 通过块号计算出块的起始与结束位置，最后一块(编号从0开始，所以最后一块编号为 parts_count - 1)需要特殊处理
+                # 通过块号计算出块的起始与结束位置，最后一块(编号从0开始，所以最后一块编号为 parts_count - 1)需要特殊处理
                 if part_number != parts_count-1:
                     start = part_number * multipart_chunksize
                     stop = (part_number + 1) * multipart_chunksize - 1

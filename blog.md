@@ -138,17 +138,106 @@ fp.write(chunk)
 
 * 断点续传
   
-1. Range 
+1.Range 
 
-**HTTP/1.1 RFC 2616** 开始支持 Range，客户端只需要在 HTTP 的 请求头部 中添加 Range: bytes=[start]-[stop] 即可
+**HTTP/1.1 RFC 2616** 开始支持 Range，客户端只需要在 HTTP 的 headers 中添加 Range: bytes=[start]-[stop] 即可
+
+如果服务器能够正常响应的话，服务器会返回 206 Partial Content 的状态码及说明.
+
+如果不能处理这种Range的话，就会返回整个资源以及响应状态码为 200 OK .（要分段下载时，要先判断这个）
+
+2.ETag
+
+Last-Modified 和 ETag 用来标记此文件是否被修改过，比如上次请求此文件时 ETag: "5d52d17f-264"，然后因为网络原因失败了（已下载完 0-499 字节），现在如果想继续从 500 字节往后下载的话，首先需要判断文件在这段时间内是否有修改过，就是比较两次的 Last-Modified 和 ETag。如果不一致，则说明文件被修改过，需要从头开始下载，而不能使用断点续传.
+
+* 同步锁  lock
+
+Python 的 threading 模块引入了锁（Lock），每个lock有两个方法： 加锁acquire（），释放锁release（），合理利用锁能够实现线程之间的互斥执行。
 
 
 
+* concurrent.furture
 
 
+concurrent.futures模块，可以利用multiprocessing实现真正的平行计算。
+
+核心原理是：concurrent.futures会以子进程的形式，平行的运行多个python解释器，从而令python程序可以利用多核CPU来提升执行速度。由于子进程与主解释器相分离，所以他们的全局解释器锁也是相互独立的。每个子进程都能够完整的使用一个CPU内核。
+
+       with futures.ThreadPoolExecutor(workers) as executor:
+            to_do = []
+            # 创建并排定Future
+            for part_number in parts:
+                # 通过块号计算出块的起始与结束位置，最后一块(编号从0开始，所以最后一块编号为 parts_count - 1)需要特殊处理
+                if part_number != parts_count-1:
+                    start = part_number * multipart_chunksize
+                    stop = (part_number + 1) * multipart_chunksize - 1
+                else:
+                    start = part_number * multipart_chunksize
+                    stop = file_size - 1
+                future = executor.submit(_fetchByRange_partial, part_number, start, stop)
+                to_do.append(future)
+
+            # 获取Future的结果，futures.as_completed(to_do)的参数是Future列表，返回迭代器，
+            # 只有当有Future运行结束后，才产出future
+            done_iter = futures.as_completed(to_do)
 
 
+#性能检测
 
+* 用python profile进行性能分析
+首先编译生成.cprofile文件
+    
+```
+python3 -m cProfile -o process1.cprofile  process1.py
+
+```
+然后用pstats表格分析
+```
+  210871 function calls (204637 primitive calls) in 6.991 seconds
+
+   Ordered by: cumulative time, function name
+   List reduced from 2144 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    209/1    0.003    0.000    6.991    6.991 {built-in method builtins.exec}
+        1    0.000    0.000    6.991    6.991 process1.py:1(<module>)
+        1    0.000    0.000    5.929    5.929 core.py:1126(__call__)
+        1    0.000    0.000    5.929    5.929 core.py:981(main)
+        1    0.000    0.000    5.922    5.922 core.py:1384(invoke)
+        1    0.000    0.000    5.922    5.922 core.py:703(invoke)
+        1    0.001    0.001    5.922    5.922 process1.py:67(download_file)
+       15    0.000    0.000    5.286    0.352 threading.py:540(wait)
+      141    5.286    0.037    5.286    0.037 {method 'acquire' of '_thread.lock' objects}
+       22    0.000    0.000    5.286    0.240 threading.py:270(wait)
+        8    0.000    0.000    5.274    0.659 _base.py:200(as_completed)
+   234/11    0.003    0.000    1.197    0.109 <frozen importlib._bootstrap>:986(_find_and_load)
+   233/11    0.002    0.000    1.196    0.109 <frozen importlib._bootstrap>:956(_find_and_load_unlocked)
+   217/11    0.002    0.000    1.151    0.105 <frozen importlib._bootstrap>:650(_load_unlocked)
+   185/11    0.002    0.000    1.150    0.105 <frozen importlib._bootstrap_external>:842(exec_module)
+   273/11    0.000    0.000    1.130    0.103 <frozen importlib._bootstrap>:211(_call_with_frames_removed)
+       13    0.001    0.000    0.817    0.063 __init__.py:1(<module>)
+        1    0.000    0.000    0.723    0.723 request_.py:1(<module>)
+        1    0.000    0.000    0.718    0.718 __init__.py:8(<module>)
+  229/194    0.003    0.000    0.693    0.004 <frozen importlib._bootstrap>:890(_find_spec)
+    42/18    0.000    0.000    0.651    0.036 {built-in method builtins.__import__}
+     1000    0.598    0.001    0.598    0.001 {built-in method nt.stat}
+      984    0.002    0.000    0.596    0.001 <frozen importlib._bootstrap_external>:135(_path_stat)
+   107/59    0.000    0.000    0.562    0.010 <frozen importlib._bootstrap>:1017(_handle_fromlist)
+      211    0.001    0.000    0.557    0.003 <frozen importlib._bootstrap_external>:1399(find_spec)
+      211    0.003    0.000    0.556    0.003 <frozen importlib._bootstrap_external>:1367(_get_spec)
+      519    0.011    0.000    0.523    0.001 <frozen importlib._bootstrap_external>:1498(find_spec)
+        2    0.000    0.000    0.508    0.254 request_.py:4(request_)
+        2    0.000    0.000    0.508    0.254 api.py:16(request)
+        2    0.000    0.000    0.504    0.252 sessions.py:457(request)
+
+```
+* snakevie图形化展示
+
+
+```
+python -m snakeviz process1.cprofile
+```
+<img src="profile.png" width = "2000" height = "800" alt="can not load" align=center />
 
 
 
