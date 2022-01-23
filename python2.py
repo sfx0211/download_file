@@ -19,7 +19,7 @@ def _fetchByRange(lock, url, temp_filename, config_filename, part_number, start,
     stop: 块的结束位置
     '''
     headers = {'Range': 'bytes=%d-%d' % (start, stop)}
-    r = request_('GET', url, info='Range: bytes={}-{}'.format(start, stop), headers=headers)
+    r = request_('GET', url, headers=headers)
 
     part_length = stop - start + 1
     if not r or len(r.content) != part_length:  # 请求失败r 为 None
@@ -73,7 +73,7 @@ def _fetchOneFile(url, dest_filename=None, multipart_chunksize=8*1024*1024):
     config_filename = official_filename + '.swp.cfg'  # 没下载完成时，存储 ETag 等信息的配置文件名
 
     # 获取文件的大小和 ETag
-    r = request_('HEAD', url, info='header message')
+    r = request_('HEAD', url)
     if not r:  # 请求失败时，r 为 None
         return
     file_size = int(r.headers['Content-Length'])
@@ -88,7 +88,7 @@ def _fetchOneFile(url, dest_filename=None, multipart_chunksize=8*1024*1024):
 
     # 首先需要判断此文件支不支持 Range 下载，请求第 1 个字节即可
     headers = {'Range': 'bytes=0-0'}
-    r = request_('HEAD', url, info='Range: bytes=0-0', headers=headers)
+    r = request_('HEAD', url, headers=headers)
     if not r:  # 请求失败时，r 为 None
         return
 
@@ -96,7 +96,7 @@ def _fetchOneFile(url, dest_filename=None, multipart_chunksize=8*1024*1024):
 
         # 需要重新从头开始下载 (wb 模式)
         with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename) as bar:  # 打印下载时的进度条，并动态显示下载速度
-            r = request_('GET', url, info='all content', stream=True)
+            r = request_('GET', url, stream=True)
             if not r:  # 请求失败时，r 为 None
                 return
             with open(temp_filename, 'wb') as fp:
