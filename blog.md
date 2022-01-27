@@ -265,8 +265,46 @@ def download(config='config.json'):
 
 
 ```
+* 关于tqdm多行显示异常的问题 
+
+  参考博客https://my.oschina.net/u/4013710/blog/3103196
+  通过查tqdm的官方文档，假如参数position=0可以避免进度条出现多行的情况。
 
 
 
+* 实现ftp协议下载
+
+ 关于ftp协议：  
+
+  FTP(File Transfer Protocol，文件传输协议) 是TCP/IP协议组中的协议之一。
+  FTP协议包括两个组成部分，其一为FTP服务器，其二为FTP客户端。其中FTP服务器用来存储文件，用户可以使用FTP客户端通过FTP协议访问位于FTP服务器上的资源。
+  默认情况下FTP协议使用TCP端口中的 20和21这两个端口，其中20用于传输数据，21用于传输控制信息。
+
+  python中默认安装的ftplib模块定义了FTP类，可用来实现简单的ftp客户端，用于上传或下载ftp服务器上的文件。
+
+
+```
+from ftplib import FTP            # 导入ftplib模块
+ftp=FTP()                         # 获取ftp变量
+ftp.set_debuglevel(2)             # 打开调试级别2，显示详细信息
+ftp.connect("host","port")          #连接的ftp sever服务器
+ftp.login("usrname","password")      # 用户登陆
+print(ftp.getwelcome())            # 打印欢迎信息
+ftp.cmd("xxx/xxx")                # 进入远程目录
+ftp.retrbinaly("RETR filename.txt",file_handle,bufsize) # 接收服务器上文件并写入本地文件
+ftp.set_debuglevel(0)             #关闭调试模式
+ftp.quit()                        #退出ftp
+
+ftp.cwd(ftppath)                 # 设置ftp当前操作的路径
+ftp.dir()                         # 显示目录下所有文件信息
+ftp.nlst()                        # 获取目录下的文件，返回一个list
+ftp.mkd(pathname)                 # 新建远程目录
+ftp.pwd()                         # 返回当前所在路径
+ftp.rmd(dirname)                  # 删除远程目录
+ftp.delete(filename)              # 删除远程文件
+ftp.rename(fromname, toname) # 将fromname修改名称为toname。
+ftp.storbinaly("STOR filename.txt",fid,bufsize)  # 上传目标文件
+ftp.retrbinary("RETR filename.txt",fid,bufsize)  # 下载FTP文件
+```
 
 
