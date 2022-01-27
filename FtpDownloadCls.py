@@ -39,7 +39,7 @@ class FtpDownloadCls:
         if not os.path.exists(localpath):
             os.makedirs(localpath)
         self.ftp.cwd(ftpath)
-        print('\n+----------- downloading-----------+\n')
+        print('\n----------- downloading-----------\n')
         for i, file in enumerate(self.ftp.nlst()):
             print('{0} <> {1}'.format(i, file))
             local = os.path.join(localpath, file)

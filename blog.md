@@ -307,4 +307,57 @@ ftp.storbinaly("STOR filename.txt",fid,bufsize)  # 上传目标文件
 ftp.retrbinary("RETR filename.txt",fid,bufsize)  # 下载FTP文件
 ```
 
+将ftp协议下载封装成一个简单的类
+```
+class FtpDownloadCls:
+    def __init__(self, ftpserver, port, usrname, pwd):
+        self.ftpserver = ftpserver # ftp主机IP
+        self.port = port          # ftp端口
+        self.usrname = usrname  # 登陆用户名
+        self.pwd = pwd          # 登陆密码
+        self.ftp = self.ftpConnect()
+
+    # ftp连接
+    def ftpConnect(self):
+        ftp = FTP()
+        try:
+            ftp.connect(self.ftpserver, self.port)
+            ftp.login(self.usrname, self.pwd)
+        except:
+            raise IOError('\n------- FTP connection failed --------\n')
+        else:
+            print(ftp.getwelcome())
+            print('\n------- FTP connection successful --------\n')
+            return ftp
+
+    # 单个文件下载到本地
+    def downloadFile(self, ftpfile, localfile):
+        chunksize = 1024
+        with open(localfile, 'wb') as fid:
+            self.ftp.retrbinary('RETR {0}'.format(ftpfile), fid.write, chunksize)
+        return True
+
+    # 下载整个目录下的文件,包括子目录文件
+    def downloadFiles(self, ftpath, localpath):
+        print('FTP PATH: {0}'.format(ftpath))
+        if not os.path.exists(localpath):
+            os.makedirs(localpath)
+        self.ftp.cwd(ftpath)
+        print('\n----------- downloading-----------\n')
+        for i, file in enumerate(self.ftp.nlst()):
+            print('{0} <> {1}'.format(i, file))
+            local = os.path.join(localpath, file)
+            if os.path.isdir(file): # 判断是否为子目录
+                if not os.path.exists(local):
+                    os.makedirs(local)
+                self.downloadFiles(file, local)
+            else:
+                self.downloadFile(file, local)
+        self.ftp.cwd('..')
+        return True
+
+    # 退出FTP连接
+    def ftpDisConnect(self):
+        self.ftp.quit()
+```
 
