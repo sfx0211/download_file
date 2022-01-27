@@ -28,6 +28,9 @@
 * 单个文件的并发下载（第一阶段完成）
 * 多文件的并发下载
 * 下载文件时如果因为网络问题重连，资源不会丢失，也就是断点续传
+* 多个文件批量下载
+* 多协议下载（除支持http/https协议外，也能够支持如ftp, bittorrent，磁力链等）
+* 支持使用正则表达式来生成多个下载地址
 
 
 &emsp;实现并发文件下载助手，首先想到了利用python并发编程，之所以要采用并发技术，是因为如果要下载大文件，从网站上下载的时间会非常长，如果能够让程序并发，就能大大缩减下载时间，并且能够同时请求多张图片，目的**解决CPU和网络I/O之间的差距**。  
@@ -35,9 +38,10 @@
 
 并发文件下载助手需要利用到的技术（技术需求）：
 
-* python网络爬虫
-* http协议
+* python网络编程
+* http/https协议
 * TCP/IP协议
+* 多线程
 
 ##结构化需求分析与建模
 
@@ -238,6 +242,30 @@ python3 -m cProfile -o process1.cprofile  process1.py
 python -m snakeviz process1.cprofile
 ```
 <img src="profile.png" width = "2000" height = "800" alt="can not load" align=center />
+
+
+* 实现多文件下载
+
+
+
+```
+def download(config='config.json'):
+    '''多线程并发下载多个大文件'''
+    # 读取包含多个大文件相关信息(url、dest_filename、multipart_chunksize)的配置文件 config.json
+    with open(config, 'r') as fp:
+        cfg = json.load(fp)
+        urls = [f['url'] for f in cfg['files']]
+        dest_filenames = [f['dest_filename'] for f in cfg['files']]
+        multipart_chunksizes = [f['multipart_chunksize'] for f in cfg['files']]
+
+    # 多线程并发下载
+    workers = min(8, len(cfg['files']))
+    with futures.ThreadPoolExecutor(workers) as executor:
+        executor.map(_fetchOneFile, urls, dest_filenames, multipart_chunksizes)  # 给 Executor.map() 传多个序列
+
+
+```
+
 
 
 

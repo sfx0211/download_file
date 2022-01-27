@@ -1,22 +1,17 @@
 {
     "files": [
         {
-            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tar.xz",
+            "url": "https://download.jetbrains.com.cn/python/pycharm-community-2021.3.1.exe",
             "dest_filename": null,
             "multipart_chunksize": 5242880
         },
         {
-            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tar.xz.asc",
+            "url": "https://pan.qiyou.cn/6.3.13/QeeYouInstaller__20211206_135744_channel973.exe",
             "dest_filename": null,
             "multipart_chunksize": 8388608
         },
-        {
-            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tgz",
-            "dest_filename": null,
-            "multipart_chunksize": 8388608
-        },
-        {
-            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tgz.asc",
+		{
+            "url": "http://markdownpad.com/download/markdownpad2-setup.exe",
             "dest_filename": null,
             "multipart_chunksize": 8388608
         }
