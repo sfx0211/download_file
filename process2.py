@@ -95,7 +95,7 @@ def _fetchOneFile(url, dest_filename=None, multipart_chunksize=8*1024*1024):
     if r.status_code != 206:  # 不支持 Range 下载时
 
         # 需要重新从头开始下载 (wb 模式)
-        with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename) as bar:  # 打印下载时的进度条，并动态显示下载速度
+        with tqdm(total=file_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename, position=0) as bar:  # 打印下载时的进度条，并动态显示下载速度
             r = request_('GET', url, stream=True)
             if not r:  # 请求失败时，r 为 None
                 return
@@ -175,7 +175,7 @@ def _fetchOneFile(url, dest_filename=None, multipart_chunksize=8*1024*1024):
             # 获取Future的结果，futures.as_completed(to_do)的参数是Future列表，返回迭代器，
             # 只有当有Future运行结束后，才产出future
             done_iter = futures.as_completed(to_do)
-            with tqdm(total=file_size, initial=succeed_parts_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename) as bar:  # 打印下载时的进度条，并动态显示下载速度
+            with tqdm(total=file_size, initial=succeed_parts_size, unit='B', unit_scale=True, unit_divisor=1024, desc=official_filename, position=0) as bar:  # 打印下载时的进度条，并动态显示下载速度
                 for future in done_iter:  # future变量表示已完成的Future对象，所以后续future.result()绝不会阻塞
                     result = future.result()
                     if result.get('failed'):
