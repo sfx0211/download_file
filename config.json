@@ -1,0 +1,25 @@
+{
+    "files": [
+        {
+            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tar.xz",
+            "dest_filename": null,
+            "multipart_chunksize": 5242880
+        },
+        {
+            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tar.xz.asc",
+            "dest_filename": null,
+            "multipart_chunksize": 8388608
+        },
+        {
+            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tgz",
+            "dest_filename": null,
+            "multipart_chunksize": 8388608
+        },
+        {
+            "url": "https://www.python.org/ftp/python/3.10.2/Python-3.10.2.tgz.asc",
+            "dest_filename": null,
+            "multipart_chunksize": 8388608
+        }
+     ]
+}
+ 
